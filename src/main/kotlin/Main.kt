@@ -1,4 +1,4 @@
-package ch.kblizz
+package at.kblizz
 
 fun main() {
     val name = "Kotlin"
