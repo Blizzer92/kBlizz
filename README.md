@@ -48,17 +48,83 @@ cd kBlizz
 ```
 kBlizz/
 ├── src/
-│   ├── main/kotlin/        # Hauptquellcode
-│   │   └── Main.kt         # Entry Point
-│   └── test/kotlin/        # Tests
-│       └── MainTest.kt
-├── build.gradle.kts        # Build-Konfiguration
-└── settings.gradle.kts     # Projekt-Einstellungen
+│   ├── main/kotlin/
+│   │   ├── Main.kt              # Entry Point
+│   │   ├── scanner/             # Lexikalische Analyse
+│   │   │   └── Scanner.kt       # Token-Scanner
+│   │   ├── token/               # Token-Definitionen
+│   │   │   ├── Token.kt         # Token-Klasse
+│   │   │   └── TokenType.kt     # Token-Typen
+│   │   ├── ast/                 # Abstract Syntax Tree
+│   │   │   ├── Expr.kt          # Expression-AST-Klassen
+│   │   │   └── AstPrinter.kt    # AST Pretty-Printer
+│   │   └── tool/                # Code-Generierungs-Tools
+│   │       └── GenerateAst.kt   # AST-Klassen-Generator
+│   └── test/kotlin/             # Tests
+│       ├── MainTest.kt
+│       └── scanner/
+│           └── ScannerTest.kt
+├── build.gradle.kts             # Build-Konfiguration
+└── settings.gradle.kts          # Projekt-Einstellungen
+```
+
+## Funktionalität
+
+### Scanner (Lexikalische Analyse)
+Der Scanner (`src/main/kotlin/scanner/Scanner.kt`) wandelt Quellcode in eine Sequenz von Tokens um:
+- Erkennt alle Lox-Sprachkonstrukte (Operatoren, Keywords, Literale)
+- Unterstützt einzeilige Kommentare (`//`)
+- Verarbeitet Strings, Zahlen und Identifikatoren
+- Trackt Zeilennummern für Fehlerberichte
+
+**Beispiel:**
+```kotlin
+val scanner = Scanner("var x = 42;")
+val tokens = scanner.scanTokens()
+```
+
+### Abstract Syntax Tree (AST)
+Die AST-Implementierung ermöglicht die strukturierte Darstellung von Ausdrücken:
+
+#### Expr-Klassen (`src/main/kotlin/ast/Expr.kt`)
+- `Binary`: Binäre Operationen (z.B. `1 + 2`, `x * y`)
+- `Unary`: Unäre Operationen (z.B. `-5`, `!true`)
+- `Literal`: Literalwerte (Zahlen, Strings, Booleans)
+- `Grouping`: Geklammerte Ausdrücke
+
+Alle Expr-Klassen implementieren das Visitor-Pattern für erweiterbare Verarbeitung.
+
+#### AST-Generator (`src/main/kotlin/tool/GenerateAst.kt`)
+Ein Code-Generator-Tool, das automatisch AST-Klassen erstellt:
+```bash
+./gradlew run --args="src/main/kotlin/ast"
+```
+
+Generiert Kotlin-Code mit:
+- Sealed Classes für typ-sichere AST-Hierarchien
+- Data Classes für strukturelle Gleichheit
+- Visitor-Pattern-Interface für AST-Traversierung
+
+#### AST-Printer (`src/main/kotlin/ast/AstPrinter.kt`)
+Pretty-Printer für AST-Darstellung in S-Expression-Format:
+```kotlin
+val expr = Binary(Literal(1), Token(PLUS, "+", null, 1), Literal(2))
+println(AstPrinter().print(expr))  // Ausgabe: (+ 1 2)
 ```
 
 ## Entwicklungsstand
 
-Das Projekt befindet sich in der frühen Entwicklungsphase. Der grundlegende Setup mit Kotlin und Gradle ist abgeschlossen.
+**Implementiert:**
+- ✅ Scanner mit vollständiger Token-Erkennung
+- ✅ AST-Datenstrukturen für Ausdrücke
+- ✅ AST-Generator-Tool
+- ✅ AST-Pretty-Printer
+- ✅ Visitor-Pattern für AST-Traversierung
+
+**In Arbeit:**
+- Parser-Implementierung
+- Evaluator/Interpreter
+- Fehlerbehandlung und -meldung
 
 ## Referenzen
 
