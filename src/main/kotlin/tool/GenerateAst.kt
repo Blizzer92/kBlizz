@@ -10,25 +10,29 @@ object GenerateAst {
     @Throws(IOException::class)
     @JvmStatic
     fun main(args: Array<String>) {
-
         if (args.size != 1) {
             System.err.println("Usage: generate_ast <output directory>")
             exitProcess(64)
         }
-        val outputDir: String? = args[0]
+        val outputDir = args[0]
 
-        defineAst(outputDir, "Expr", listOf(
-            "Binary   : Expr left, Token operator, Expr right",
-            "Grouping : Expr expression",
-            "Literal  : Any value",
-            "Unary    : Token operator, Expr right"
-        ) as MutableList<String?>?
-        );
+        defineAst(
+            outputDir,
+            "Expr",
+            listOf(
+                "Binary   : Expr left, Token operator, Expr right",
+                "Grouping : Expr expression",
+                "Literal  : Any value",
+                "Unary    : Token operator, Expr right"
+            )
+        )
     }
 
     @Throws(IOException::class)
     private fun defineAst(
-        outputDir: String?, baseName: String?, types: MutableList<String?>?
+        outputDir: String,
+        baseName: String,
+        types: List<String>
     ) {
         val path = "$outputDir/$baseName.kt"
         val writer = PrintWriter(path, "UTF-8")
@@ -39,12 +43,12 @@ object GenerateAst {
         writer.println()
         writer.println("sealed class $baseName {")
 
-        defineVisitor(writer, baseName, types as MutableList<String>)
+        defineVisitor(writer, baseName, types)
 
         // The AST classes.
-        for (type in types!!) {
+        for (type in types) {
             val className =
-                type!!.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].trim { it <= ' ' }
+                type.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].trim { it <= ' ' }
             val fields = type.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1].trim { it <= ' ' }
             defineType(writer, baseName, className, fields)
         }
@@ -58,8 +62,10 @@ object GenerateAst {
     }
 
     private fun defineType(
-        writer: PrintWriter, baseName: String?,
-        className: String?, fieldList: String
+        writer: PrintWriter,
+        baseName: String,
+        className: String,
+        fieldList: String
     ) {
         // Convert field list to Kotlin syntax
         val fields = fieldList.split(", ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -82,7 +88,9 @@ object GenerateAst {
     }
 
     private fun defineVisitor(
-        writer: PrintWriter, baseName: String?, types: MutableList<String>
+        writer: PrintWriter,
+        baseName: String,
+        types: List<String>
     ) {
         writer.println("  interface Visitor<R> {")
 
@@ -90,7 +98,7 @@ object GenerateAst {
             val typeName = type.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].trim { it <= ' ' }
             writer.println(
                 "    fun visit" + typeName + baseName + "(" +
-                        baseName?.lowercase(Locale.getDefault()) + ": " + typeName + "): R"
+                        baseName.lowercase(Locale.getDefault()) + ": " + typeName + "): R"
             )
         }
 
