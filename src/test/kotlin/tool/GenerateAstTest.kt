@@ -109,7 +109,7 @@ class GenerateAstTest {
         val content = File("$testOutputDir/Expr.kt").readText()
         assertTrue(content.contains("Binary(val left: Expr, val operator: Token, val right: Expr) : Expr()"))
         assertTrue(content.contains("Grouping(val expression: Expr) : Expr()"))
-        assertTrue(content.contains("Literal(val value: Any) : Expr()"))
+        assertTrue(content.contains("Literal(val value: Any?) : Expr()"))
         assertTrue(content.contains("Unary(val operator: Token, val right: Expr) : Expr()"))
     }
 

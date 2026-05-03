@@ -1,9 +1,13 @@
 package at.kblizz
 
+import at.kblizz.ast.AstPrinter
+import at.kblizz.ast.Expr
+import at.kblizz.parser.Parser
 import at.kblizz.scanner.Scanner
 import java.io.File
 import java.nio.charset.Charset
 import kotlin.system.exitProcess
+
 
 class KBlizz {
     private val errorReporter = ErrorReporter()
@@ -46,8 +50,12 @@ class KBlizz {
         val scanner = Scanner(input, errorReporter)
         val tokens = scanner.scanTokens()
 
-        for (token in tokens) {
-            println(token)
-        }
+        val parser = Parser(tokens)
+        val expression = parser.parse()
+
+        // Stop if there was a syntax error.
+        if (errorReporter.hadError) return
+
+        println(AstPrinter().print(expression))
     }
 }
