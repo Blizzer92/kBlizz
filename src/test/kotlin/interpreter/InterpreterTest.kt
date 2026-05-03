@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 class InterpreterTest {
     private fun interpret(source: String): CapturedOutput {
         val expression = parse(source)
-        val interpreter: Interpreter = Interpreter()
+        val interpreter = Interpreter()
 
         val stdout = ByteArrayOutputStream()
         val stderr = ByteArrayOutputStream()
