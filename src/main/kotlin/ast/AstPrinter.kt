@@ -6,8 +6,8 @@ import at.kblizz.token.TokenType
 
 internal class AstPrinter : Expr.Visitor<String?> {
 
-    fun print(expr: Expr): String? {
-        return expr.accept<String?>(this)
+    fun print(expr: Expr?): String? {
+        return expr?.accept<String?>(this)
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): String {
