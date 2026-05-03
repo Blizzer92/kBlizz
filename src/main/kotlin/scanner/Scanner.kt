@@ -1,12 +1,15 @@
 package at.kblizz.scanner
 
-import at.kblizz.KBlizz
+import at.kblizz.ErrorReporter
 import at.kblizz.token.Token
 import at.kblizz.token.TokenType
 
 
-internal class Scanner(private val source: String?) {
-    private val tokens: MutableList<Token?> = ArrayList()
+internal class Scanner(
+    private val source: String,
+    private val errorReporter: ErrorReporter
+) {
+    private val tokens: MutableList<Token> = mutableListOf()
     private val keywords = mapOf(
         "and" to TokenType.AND,
         "class" to TokenType.CLASS,
@@ -30,7 +33,7 @@ internal class Scanner(private val source: String?) {
     private var current = 0
     private var line = 1
 
-    fun scanTokens(): MutableList<Token?> {
+    fun scanTokens(): List<Token> {
         while (!isAtEnd()) {
             start = current
             scanToken()
@@ -41,7 +44,7 @@ internal class Scanner(private val source: String?) {
     }
 
     private fun isAtEnd(): Boolean {
-        return current >= source!!.length
+        return current >= source.length
     }
 
     private fun scanToken() {
@@ -58,45 +61,39 @@ internal class Scanner(private val source: String?) {
             ';' -> addToken(TokenType.SEMICOLON)
             '*' -> addToken(TokenType.STAR)
             '!' -> {
-                    if(match('=')){
-                        addToken(TokenType.BANG_EQUAL)
-                    }
-                    else{
-                        addToken(TokenType.BANG)
-                    }
+                if (match('=')) {
+                    addToken(TokenType.BANG_EQUAL)
+                } else {
+                    addToken(TokenType.BANG)
+                }
             }
             '=' -> {
-                if(match('=')){
+                if (match('=')) {
                     addToken(TokenType.EQUAL_EQUAL)
-                }
-                else{
+                } else {
                     addToken(TokenType.EQUAL)
                 }
             }
             '<' -> {
-                if(match('=')){
+                if (match('=')) {
                     addToken(TokenType.LESS_EQUAL)
-                }
-                else{
+                } else {
                     addToken(TokenType.LESS)
                 }
             }
             '>' -> {
-                if(match('=')){
+                if (match('=')) {
                     addToken(TokenType.GREATER_EQUAL)
-                }
-                else{
+                } else {
                     addToken(TokenType.GREATER)
                 }
             }
             '/' -> {
-                if(match('/')){
-                    while (peek() != '\n' && !isAtEnd())
-                    {
+                if (match('/')) {
+                    while (peek() != '\n' && !isAtEnd()) {
                         advance()
                     }
-                }
-                else{
+                } else {
                     addToken(TokenType.SLASH)
                 }
             }
@@ -112,19 +109,13 @@ internal class Scanner(private val source: String?) {
             '"' -> {
                 string()
             }
-            'o' -> {
-                if(match('r')){
-                    addToken(TokenType.OR)
-                }
-            }
             else -> {
-                if(isDigit(c)){
+                if (isDigit(c)) {
                     number()
                 } else if (isAlpha(c)) {
                     identifier()
-                }
-                else {
-                    KBlizz().error(line, "Unexpected character.")
+                } else {
+                    errorReporter.error(line, "Unexpected character.")
                 }
             }
         }
@@ -135,24 +126,21 @@ internal class Scanner(private val source: String?) {
             advance()
         }
 
-        val text = source!!.substring(start, current)
-        var type = keywords[text]
-        if (type == null) {
-            type = TokenType.IDENTIFIER
-        }
+        val text = source.substring(start, current)
+        val type = keywords[text] ?: TokenType.IDENTIFIER
         addToken(type)
     }
 
     private fun advance(): Char {
-        return source!![current++]
+        return source[current++]
     }
 
-    private fun addToken(type: TokenType?) {
+    private fun addToken(type: TokenType) {
         addToken(type, null)
     }
 
-    private fun addToken(type: TokenType?, literal: Any?) {
-        val text = source!!.substring(start, current)
+    private fun addToken(type: TokenType, literal: Any?) {
+        val text = source.substring(start, current)
         tokens.add(Token(type, text, literal, line))
     }
 
@@ -160,7 +148,7 @@ internal class Scanner(private val source: String?) {
         if (isAtEnd()) {
             return false
         }
-        if (source!!.get(current) != expected) {
+        if (source[current] != expected) {
             return false
         }
 
@@ -172,14 +160,14 @@ internal class Scanner(private val source: String?) {
         if (isAtEnd()) {
             return '\u0000'
         }
-        return source!![current]
+        return source[current]
     }
 
     private fun peekNext(): Char {
-        if (current + 1 >= source!!.length) {
+        if (current + 1 >= source.length) {
             return '\u0000'
         }
-        return source.get(current + 1)
+        return source[current + 1]
     }
 
     private fun isAlpha(c: Char): Boolean {
@@ -197,13 +185,13 @@ internal class Scanner(private val source: String?) {
             advance()
         }
         if (isAtEnd()) {
-            KBlizz().error(line, "Unterminated string.")
+            errorReporter.error(line, "Unterminated string.")
             return
         }
 
         advance()
 
-        addToken(TokenType.STRING, source!!.substring(start + 1, current - 1))
+        addToken(TokenType.STRING, source.substring(start + 1, current - 1))
     }
 
     private fun number() {
@@ -221,7 +209,7 @@ internal class Scanner(private val source: String?) {
 
         addToken(
             TokenType.NUMBER,
-            source!!.substring(start, current).toDouble()
+            source.substring(start, current).toDouble()
         )
     }
 

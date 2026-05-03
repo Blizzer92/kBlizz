@@ -1,5 +1,6 @@
 package scanner
 
+import at.kblizz.ErrorReporter
 import at.kblizz.scanner.Scanner
 import at.kblizz.token.Token
 import at.kblizz.token.TokenType
@@ -8,11 +9,11 @@ import kotlin.test.assertEquals
 
 class ScannerTest {
     private fun scanTokens(source: String): List<Token> {
-        return Scanner(source).scanTokens().filterNotNull()
+        return Scanner(source, ErrorReporter()).scanTokens()
     }
 
     private fun assertTypes(source: String, expected: List<TokenType>) {
-        val types = scanTokens(source).map { it.type!! }
+        val types = scanTokens(source).map { it.type }
         assertEquals(expected, types)
     }
 

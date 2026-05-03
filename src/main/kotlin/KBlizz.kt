@@ -6,57 +6,48 @@ import java.nio.charset.Charset
 import kotlin.system.exitProcess
 
 class KBlizz {
-    var hadError = false
+    private val errorReporter = ErrorReporter()
+
+    companion object {
+        private const val EXIT_CODE_USAGE = 64
+        private const val EXIT_CODE_DATA_ERROR = 65
+    }
 
     fun start(args: Array<String>) {
-        if(args.count() > 1){
+        if (args.count() > 1) {
             println("Usage: kBlizz [script]")
-            exitProcess(64);
-        } else if(args.count() == 1){
-            runFile(args[0]);
+            exitProcess(EXIT_CODE_USAGE)
+        } else if (args.count() == 1) {
+            runFile(args[0])
         } else {
-            runPrompt();
+            runPrompt()
         }
     }
 
-    fun runFile(path: String){
-        val bytes = File(path).readBytes();
+    fun runFile(path: String) {
+        val bytes = File(path).readBytes()
         run(String(bytes, Charset.defaultCharset()))
 
-        if(hadError){
-            exitProcess(65)
+        if (errorReporter.hadError) {
+            exitProcess(EXIT_CODE_DATA_ERROR)
         }
     }
 
-    fun runPrompt(){
-        while(true) {
-            println("> ")
+    fun runPrompt() {
+        while (true) {
+            print("> ")
             val input = readlnOrNull() ?: return
             run(input)
-            hadError = false
+            errorReporter.reset()
         }
     }
 
-    fun run(input: String){
-        val scanner = Scanner(input)
+    fun run(input: String) {
+        val scanner = Scanner(input, errorReporter)
         val tokens = scanner.scanTokens()
 
-        for(token in tokens){
+        for (token in tokens) {
             println(token)
         }
-    }
-
-    fun error(line: Int, message: String?) {
-        report(line, "", message)
-    }
-
-    private fun report(
-        line: Int, where: String?,
-        message: String?
-    ) {
-        System.err.println(
-            "[line $line] Error$where: $message"
-        )
-        hadError = true
     }
 }
