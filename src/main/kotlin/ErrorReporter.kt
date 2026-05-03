@@ -1,16 +1,26 @@
 package at.kblizz
 
+import at.kblizz.error.RuntimeError
 import at.kblizz.token.Token
 import at.kblizz.token.TokenType
-
 
 
 class ErrorReporter {
     var hadError = false
         private set
+    var hadRuntimeError = false
+        private set
 
     fun error(line: Int, message: String) {
         report(line, "", message)
+    }
+
+    fun runtimeError(error: RuntimeError) {
+        System.err.println(
+            error.message +
+                    "\n[line " + error.token!!.line + "]"
+        )
+        hadRuntimeError = true
     }
 
     private fun report(line: Int, where: String, message: String) {
