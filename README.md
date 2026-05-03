@@ -1,10 +1,10 @@
 # kBlizz
 
-Ein Interpreter-Projekt basierend auf dem Buch "Crafting Interpreters" von Robert Nystrom, implementiert in Kotlin.
+Ein interpreter-Projekt basierend auf dem Buch "Crafting Interpreters" von Robert Nystrom, implementiert in Kotlin.
 
 ## Über das Projekt
 
-kBlizz ist eine Programmiersprache, die im Rahmen eines Buchclubs zu "Crafting Interpreters" entwickelt wird. Das Projekt folgt den Prinzipien und Techniken aus dem Buch, um einen vollständigen Interpreter von Grund auf zu bauen.
+kBlizz ist eine Programmiersprache, die im Rahmen eines Buchclubs zu "Crafting Interpreters" entwickelt wird. Das Projekt folgt den Prinzipien und Techniken aus dem Buch, um einen vollständigen interpreter von Grund auf zu bauen.
 
 ## Technologie-Stack
 
@@ -123,7 +123,7 @@ println(AstPrinter().print(expr))  // Ausgabe: (+ 1 2)
 
 **In Arbeit:**
 - Parser-Implementierung
-- Evaluator/Interpreter
+- Evaluator/interpreter
 - Fehlerbehandlung und -meldung
 
 ## Referenzen

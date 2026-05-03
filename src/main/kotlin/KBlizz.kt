@@ -1,7 +1,6 @@
 package at.kblizz
 
-import at.kblizz.ast.AstPrinter
-import at.kblizz.ast.Expr
+import at.kblizz.interpreter.Interpreter
 import at.kblizz.parser.Parser
 import at.kblizz.scanner.Scanner
 import java.io.File
@@ -11,10 +10,11 @@ import kotlin.system.exitProcess
 
 class KBlizz {
     private val errorReporter = ErrorReporter()
-
+    val interpreter: Interpreter = Interpreter()
     companion object {
         private const val EXIT_CODE_USAGE = 64
         private const val EXIT_CODE_DATA_ERROR = 65
+        private const val EXIT_CODE_RUNTIME_ERROR = 70
     }
 
     fun start(args: Array<String>) {
@@ -34,6 +34,9 @@ class KBlizz {
 
         if (errorReporter.hadError) {
             exitProcess(EXIT_CODE_DATA_ERROR)
+        }
+        if (errorReporter.hadRuntimeError) {
+            exitProcess(EXIT_CODE_RUNTIME_ERROR)
         }
     }
 
@@ -56,6 +59,6 @@ class KBlizz {
         // Stop if there was a syntax error.
         if (errorReporter.hadError) return
 
-        println(AstPrinter().print(expression))
+        interpreter.interpret(expression)
     }
 }
