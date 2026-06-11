@@ -183,6 +183,34 @@ class AstPrinterTest {
     }
 
     @Test
+    fun printsVariableExpression() {
+        val expr = Expr.Variable(Token(TokenType.IDENTIFIER, "myVar", null, 1))
+        assertEquals("myVar", printer.print(expr))
+    }
+
+    @Test
+    fun printsAssignExpression() {
+        val expr = Expr.Assign(
+            Token(TokenType.IDENTIFIER, "x", null, 1),
+            Expr.Literal(42)
+        )
+        assertEquals("(assign x 42)", printer.print(expr))
+    }
+
+    @Test
+    fun printsAssignWithComplexValue() {
+        val expr = Expr.Assign(
+            Token(TokenType.IDENTIFIER, "result", null, 1),
+            Expr.Binary(
+                Expr.Literal(1),
+                Token(TokenType.PLUS, "+", null, 1),
+                Expr.Literal(2)
+            )
+        )
+        assertEquals("(assign result (+ 1 2))", printer.print(expr))
+    }
+
+    @Test
     fun printsVeryDeeplyNestedExpression() {
         // ((1 + 2) * 3) - (4 / 5)
         val expr = Expr.Binary(
