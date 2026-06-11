@@ -191,4 +191,67 @@ class ParserTest {
         assertIs<Stmt.Var>(stmts[1])
         assertIs<Stmt.Print>(stmts[2])
     }
+
+    @Test
+    fun parsesIfStatement() {
+        val stmts = parseStmts("if (true) print 1;")
+        val ifStmt = assertIs<Stmt.If>(stmts[0])
+        assertEquals(true, assertIs<Expr.Literal>(ifStmt.condition).value)
+        assertIs<Stmt.Print>(ifStmt.thenBranch)
+        assertNull(ifStmt.elseBranch)
+    }
+
+    @Test
+    fun parsesIfElseStatement() {
+        val stmts = parseStmts("if (true) print 1; else print 2;")
+        val ifStmt = assertIs<Stmt.If>(stmts[0])
+        assertIs<Stmt.Print>(ifStmt.thenBranch)
+        assertIs<Stmt.Print>(assertNotNull(ifStmt.elseBranch))
+    }
+
+    @Test
+    fun parsesWhileStatement() {
+        val stmts = parseStmts("while (true) print 1;")
+        val whileStmt = assertIs<Stmt.While>(stmts[0])
+        assertEquals(true, assertIs<Expr.Literal>(whileStmt.condition).value)
+        assertIs<Stmt.Print>(whileStmt.body)
+    }
+
+    @Test
+    fun parsesForLoopDesugarsToWhile() {
+        // for loop is desugared: outer Block(var decl, While(cond, Block(body, increment)))
+        val stmts = parseStmts("for (var i = 0; i < 3; i = i + 1) print i;")
+        val outer = assertIs<Stmt.Block>(stmts[0])
+        assertIs<Stmt.Var>(outer.statements[0])
+        val whileStmt = assertIs<Stmt.While>(outer.statements[1])
+        assertIs<Expr.Binary>(whileStmt.condition)
+    }
+
+    @Test
+    fun parsesForLoopWithNoInitializer() {
+        val stmts = parseStmts("for (; i < 3; i = i + 1) print i;")
+        // no outer block — just While(cond, Block(body, increment))
+        assertIs<Stmt.While>(stmts[0])
+    }
+
+    @Test
+    fun parsesForLoopWithNoIncrement() {
+        val stmts = parseStmts("for (var i = 0; i < 3;) print i;")
+        val outer = assertIs<Stmt.Block>(stmts[0])
+        assertIs<Stmt.Var>(outer.statements[0])
+        val whileStmt = assertIs<Stmt.While>(outer.statements[1])
+        assertIs<Stmt.Print>(whileStmt.body)
+    }
+
+    @Test
+    fun parsesLogicalAndExpression() {
+        val logical = assertIs<Expr.Logical>(assertNotNull(parseExpr("true and false")))
+        assertEquals(TokenType.AND, logical.operator.type)
+    }
+
+    @Test
+    fun parsesLogicalOrExpression() {
+        val logical = assertIs<Expr.Logical>(assertNotNull(parseExpr("false or true")))
+        assertEquals(TokenType.OR, logical.operator.type)
+    }
 }

@@ -236,4 +236,24 @@ class AstPrinterTest {
         )
         assertEquals("(- (* (group (+ 1 2)) 3) (group (/ 4 5)))", printer.print(expr))
     }
+
+    @Test
+    fun printsLogicalAndExpression() {
+        val expr = Expr.Logical(
+            Expr.Literal(true),
+            Token(TokenType.AND, "and", null, 1),
+            Expr.Literal(false)
+        )
+        assertEquals("(and true false)", printer.print(expr))
+    }
+
+    @Test
+    fun printsLogicalOrExpression() {
+        val expr = Expr.Logical(
+            Expr.Literal(false),
+            Token(TokenType.OR, "or", null, 1),
+            Expr.Literal(true)
+        )
+        assertEquals("(or false true)", printer.print(expr))
+    }
 }

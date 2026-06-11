@@ -3,6 +3,7 @@ package at.kblizz.parser
 import at.kblizz.ErrorReporter
 import at.kblizz.ast.Expr
 import at.kblizz.ast.Expr.Assign
+import at.kblizz.ast.Expr.Logical
 import at.kblizz.ast.Stmt
 import at.kblizz.token.Token
 import at.kblizz.token.TokenType
@@ -38,13 +39,64 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun statement(): Stmt {
+        if (match(TokenType.FOR)) return forStatement()
+        if (match(TokenType.IF)) return ifStatement()
         if (match(TokenType.PRINT)) return printStatement()
+        if (match(TokenType.WHILE)) return whileStatement()
         if (match(TokenType.LEFT_BRACED)) return Stmt.Block(block())
 
         return expressionStatement()
     }
 
+    private fun whileStatement(): Stmt {
+        consume(TokenType.LEFT_PARENT, "Expect '(' after 'while'.")
+        val condition: Expr = expression()
+        consume(TokenType.RIGHT_PARENT, "Expect ')' after condition.")
+        val body: Stmt = statement()
 
+        return Stmt.While(condition, body)
+    }
+
+    private fun forStatement(): Stmt {
+        consume(TokenType.LEFT_PARENT, "Expect '(' after 'for'.")
+
+        val initializer: Stmt? = when {
+            match(TokenType.SEMICOLON) -> null
+            match(TokenType.VAR) -> varDeclaration()
+            else -> expressionStatement()
+        }
+
+        val condition: Expr = if (!check(TokenType.SEMICOLON)) expression() else Expr.Literal(true)
+        consume(TokenType.SEMICOLON, "Expect ';' after loop condition.")
+
+        val increment: Expr? = if (!check(TokenType.RIGHT_PARENT)) expression() else null
+        consume(TokenType.RIGHT_PARENT, "Expect ')' after for clauses.")
+
+        var body: Stmt = statement()
+
+        if (increment != null) {
+            body = Stmt.Block(mutableListOf(body, Stmt.Expression(increment)))
+        }
+
+        body = Stmt.While(condition, body)
+
+        if (initializer != null) {
+            body = Stmt.Block(mutableListOf(initializer, body))
+        }
+
+        return body
+    }
+
+    private fun ifStatement(): Stmt {
+        consume(TokenType.LEFT_PARENT, "Expect '(' after 'if'.")
+        val condition = expression()
+        consume(TokenType.RIGHT_PARENT, "Expect ')' after if condition.")
+
+        val thenBranch = statement()
+        val elseBranch: Stmt? = if (match(TokenType.ELSE)) statement() else null
+
+        return Stmt.If(condition, thenBranch, elseBranch)
+    }
 
     private fun printStatement(): Stmt {
         val value = expression()
@@ -82,7 +134,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun assignment(): Expr {
-        val expr = equality()
+        val expr: Expr = or()
 
         if (match(TokenType.EQUAL)) {
             val equals: Token = previous()
@@ -98,6 +150,31 @@ class Parser(private val tokens: List<Token>) {
 
         return expr
     }
+
+    private fun or(): Expr {
+        var expr: Expr = and()
+
+        while (match(TokenType.OR)) {
+            val operator = previous()
+            val right: Expr = and()
+            expr = Logical(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    private fun and(): Expr {
+        var expr = equality()
+
+        while (match(TokenType.AND)) {
+            val operator = previous()
+            val right = equality()
+            expr = Logical(expr, operator, right)
+        }
+
+        return expr
+    }
+
 
     private fun equality(): Expr {
         var expr: Expr = comparison()

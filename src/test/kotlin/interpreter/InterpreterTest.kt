@@ -282,5 +282,131 @@ class InterpreterTest {
         )
     }
 
+    // --- if statement ---
+
+    @Test
+    fun ifTrueBranchExecutes() {
+        assertEquals("yes", interpret("if (true) print \"yes\";").stdout)
+    }
+
+    @Test
+    fun ifFalseBranchSkipped() {
+        assertEquals("", interpret("if (false) print \"yes\";").stdout)
+    }
+
+    @Test
+    fun ifElseTrueTakesThenBranch() {
+        assertEquals("yes", interpret("if (true) print \"yes\"; else print \"no\";").stdout)
+    }
+
+    @Test
+    fun ifElseFalseTakesElseBranch() {
+        assertEquals("no", interpret("if (false) print \"yes\"; else print \"no\";").stdout)
+    }
+
+    @Test
+    fun ifWithoutElseDoesNotCrash() {
+        assertEquals("", interpret("if (false) print \"yes\";").stdout)
+    }
+
+    @Test
+    fun ifUsesConditionValue() {
+        assertEquals("yes", interpret("var x = 1; if (x) print \"yes\"; else print \"no\";").stdout)
+        assertEquals("no", interpret("var x = nil; if (x) print \"yes\"; else print \"no\";").stdout)
+    }
+
+    // --- logical operators ---
+
+    @Test
+    fun andReturnsTrueWhenBothTrue() {
+        assertEquals("true", interpret("print true and true;").stdout)
+    }
+
+    @Test
+    fun andShortCircuitsOnFalseLeft() {
+        // side effect never executes if left is false
+        val output = interpret("var x = false; if (false and (x = true)) nil; print x;")
+        assertEquals("false", output.stdout)
+    }
+
+    @Test
+    fun andReturnsLeftValueWhenFalsy() {
+        assertEquals("nil", interpret("print nil and true;").stdout)
+    }
+
+    @Test
+    fun andReturnsRightValueWhenLeftTruthy() {
+        assertEquals("right", interpret("print true and \"right\";").stdout)
+    }
+
+    @Test
+    fun orReturnsTrueWhenFirstTrue() {
+        assertEquals("first", interpret("print \"first\" or \"second\";").stdout)
+    }
+
+    @Test
+    fun orShortCircuitsOnTrueLeft() {
+        val output = interpret("var x = false; if (true or (x = true)) nil; print x;")
+        assertEquals("false", output.stdout)
+    }
+
+    @Test
+    fun orReturnsRightWhenLeftFalsy() {
+        assertEquals("right", interpret("print false or \"right\";").stdout)
+    }
+
+    // --- while loop ---
+
+    @Test
+    fun whileLoopExecutesBody() {
+        val output = interpret("var i = 0; while (i < 3) { print i; i = i + 1; }")
+        assertEquals("0\n1\n2", output.stdout)
+    }
+
+    @Test
+    fun whileLoopSkipsWhenConditionFalse() {
+        assertEquals("", interpret("while (false) print \"never\";").stdout)
+    }
+
+    // --- for loop ---
+
+    @Test
+    fun forLoopCountsUp() {
+        val output = interpret("for (var i = 0; i < 3; i = i + 1) print i;")
+        assertEquals("0\n1\n2", output.stdout)
+    }
+
+    @Test
+    fun forLoopWithNoInitializer() {
+        val output = interpret("var i = 0; for (; i < 3; i = i + 1) print i;")
+        assertEquals("0\n1\n2", output.stdout)
+    }
+
+    @Test
+    fun forLoopWithNoIncrement() {
+        val output = interpret("for (var i = 0; i < 3;) { print i; i = i + 1; }")
+        assertEquals("0\n1\n2", output.stdout)
+    }
+
+    @Test
+    fun forLoopInitializerScopedToLoop() {
+        interpret("for (var i = 0; i < 1; i = i + 1) print i;")
+        // i should not be accessible outside the for loop
+        val output = interpret("for (var i = 0; i < 1; i = i + 1) print i; print i;")
+        assertTrue(output.stderr.contains("Undefined variable 'i'."))
+    }
+
+    @Test
+    fun forLoopBuildsList() {
+        val output = interpret("""
+            var result = 0;
+            for (var i = 1; i <= 5; i = i + 1) {
+                result = result + i;
+            }
+            print result;
+        """.trimIndent())
+        assertEquals("15", output.stdout)
+    }
+
     private data class CapturedOutput(val stdout: String, val stderr: String)
 }
