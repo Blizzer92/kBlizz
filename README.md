@@ -10,12 +10,12 @@ kBlizz ist eine Programmiersprache, die im Rahmen eines Buchclubs zu "Crafting I
 
 - **Sprache:** Kotlin 2.3.0
 - **Build-Tool:** Gradle
-- **JVM:** Version 25
+- **JVM:** Version 21+
 - **Testing:** JUnit Platform
 
 ## Voraussetzungen
 
-- JDK 25 oder höher
+- JDK 21 oder höher
 - Gradle (wird über den Gradle Wrapper bereitgestellt)
 
 ## Installation
@@ -45,9 +45,16 @@ Skript-Datei ausführen:
 ./gradlew run --args="pfad/zur/datei.lox"
 ```
 
+> **Hinweis:** Der REPL-Modus verarbeitet eine Zeile pro Eingabe. Mehrzeilige Blöcke (`{ ... }`) müssen als Datei ausgeführt werden.
+
 ### Tests ausführen
 ```bash
 ./gradlew test
+```
+
+Einzelne Testklasse:
+```bash
+./gradlew test --tests "at.kblizz.interpreter.InterpreterTest"
 ```
 
 ## Projektstruktur
@@ -66,7 +73,10 @@ kBlizz/
 │   │   │   └── TokenType.kt           # Token-Typen
 │   │   ├── ast/
 │   │   │   ├── Expr.kt                # Expression-AST-Klassen (Visitor-Pattern)
+│   │   │   ├── Stmt.kt                # Statement-AST-Klassen (Visitor-Pattern)
 │   │   │   └── AstPrinter.kt          # AST Pretty-Printer (S-Expression-Format)
+│   │   ├── environment/
+│   │   │   └── Environment.kt         # Lexikalische Scoping-Umgebung
 │   │   ├── parser/
 │   │   │   └── Parser.kt              # Rekursiv-Abstieg-Parser
 │   │   ├── interpreter/
@@ -76,9 +86,10 @@ kBlizz/
 │   │   └── tool/
 │   │       └── GenerateAst.kt         # AST-Klassen-Generator
 │   └── test/kotlin/
-│       ├── MainTest.kt
 │       ├── ast/
 │       │   └── AstPrinterTest.kt
+│       ├── environment/
+│       │   └── EnvironmentTest.kt
 │       ├── interpreter/
 │       │   └── InterpreterTest.kt
 │       ├── parser/
@@ -95,67 +106,70 @@ kBlizz/
 ## Funktionalität
 
 ### Scanner (Lexikalische Analyse)
-Der Scanner (`src/main/kotlin/scanner/Scanner.kt`) wandelt Quellcode in eine Sequenz von Tokens um:
+Der Scanner wandelt Quellcode in eine Sequenz von Tokens um:
 - Erkennt alle Lox-Sprachkonstrukte (Operatoren, Keywords, Literale)
 - Unterstützt einzeilige Kommentare (`//`)
 - Verarbeitet Strings, Zahlen und Identifikatoren
 - Trackt Zeilennummern für Fehlerberichte
 
 ### Abstract Syntax Tree (AST)
-Die AST-Implementierung ermöglicht die strukturierte Darstellung von Ausdrücken:
+Zwei Hierarchien mit Visitor-Pattern:
 
-#### Expr-Klassen (`src/main/kotlin/ast/Expr.kt`)
-- `Binary`: Binäre Operationen (z.B. `1 + 2`, `"a" + "b"`)
-- `Unary`: Unäre Operationen (z.B. `-5`, `!true`)
-- `Literal`: Literalwerte (Zahlen, Strings, Booleans, `nil`)
-- `Grouping`: Geklammerte Ausdrücke
+**Expr** — Ausdrücke: `Assign`, `Binary`, `Grouping`, `Literal`, `Logical`, `Unary`, `Variable`
 
-Alle Expr-Klassen implementieren das Visitor-Pattern für erweiterbare Verarbeitung.
+**Stmt** — Anweisungen: `Block`, `Expression`, `If`, `Print`, `Var`, `While`
 
-#### AST-Printer (`src/main/kotlin/ast/AstPrinter.kt`)
-Pretty-Printer für AST-Darstellung in S-Expression-Format:
-```kotlin
-val expr = Binary(Literal(1.0), Token(PLUS, "+", null, 1), Literal(2.0))
-println(AstPrinter().print(expr))  // Ausgabe: (+ 1 2)
+Der AST-Printer gibt Ausdrücke im S-Expression-Format aus:
+```
+(+ 1 (* 2 3))   →   1 + 2 * 3
+(and true false) →   true and false
 ```
 
-### Parser (`src/main/kotlin/parser/Parser.kt`)
-Rekursiv-Abstieg-Parser, der Token-Sequenzen in einen AST umwandelt:
-- Wertet Ausdrücke nach Operatorpräzedenz aus (Gleichheit → Vergleich → Term → Faktor → Unär → Primär)
-- Erkennt geklammerte Ausdrücke, Literale und Identifikatoren
-- Fehlertoleranz durch Panik-Modus-Synchronisation
+### Parser
+Rekursiv-Abstieg-Parser mit vollständiger Operatorpräzedenz:
 
-### Interpreter (`src/main/kotlin/interpreter/Interpreter.kt`)
-Tree-Walk-Interpreter, der den AST direkt auswertet:
-- Arithmetische Operatoren: `+`, `-`, `*`, `/`
-- Vergleichsoperatoren: `>`, `>=`, `<`, `<=`, `==`, `!=`
-- String-Konkatenation mit `+`
-- Unäre Negation (`-`) und logische Negation (`!`)
-- Laufzeitfehler-Prüfung für Typ-Fehler
+```
+Zuweisung → Oder → Und → Gleichheit → Vergleich → Term → Faktor → Unär → Primär
+```
 
-### Fehlerbehandlung (`src/main/kotlin/ErrorReporter.kt`)
-Zentrales Fehler-Reporting mit Unterscheidung zwischen Syntax- und Laufzeitfehlern:
+`for`-Schleifen werden im Parser zu `while` + `Block` desugared — kein eigener AST-Knoten.
+
+### Environment
+Verknüpfte Kette von `HashMap`s für lexikalisches Scoping. Jeder Block erstellt eine neue `Environment(enclosing = äußere)`. Variable Lookups wandern die Kette nach oben.
+
+### Interpreter
+Tree-Walk-Interpreter:
+
+| Kategorie | Unterstützt |
+|---|---|
+| Arithmetik | `+` `-` `*` `/` |
+| Vergleich | `>` `>=` `<` `<=` `==` `!=` |
+| Logik | `and` `or` `!` (mit Short-Circuit) |
+| Strings | Konkatenation mit `+` |
+| Variablen | `var`, Zuweisung, lexikalisches Scoping |
+| Kontrollfluss | `if`/`else`, `while`, `for` |
+| Ausgabe | `print` |
+
+### Fehlerbehandlung
 - Syntaxfehler mit Zeilennummer und Token-Kontext
 - Laufzeitfehler mit `RuntimeError`-Klasse
-- Exit-Codes gemäß Unix-Konvention (64 = Usage, 65 = Datenfehler, 70 = Laufzeitfehler)
+- Exit-Codes: 64 (Usage), 65 (Datenfehler), 70 (Laufzeitfehler)
 
 ## Entwicklungsstand
 
-**Implementiert:**
-- Scanner mit vollständiger Token-Erkennung
-- AST-Datenstrukturen für Ausdrücke (Visitor-Pattern)
-- AST-Generator-Tool
-- AST-Pretty-Printer
-- Rekursiv-Abstieg-Parser
-- Tree-Walk-Interpreter für Ausdrücke
-- Fehlerbehandlung (Syntax- und Laufzeitfehler)
-- REPL-Modus und Datei-Ausführung
+**Implementiert (Kapitel 4–9):**
+- [x] Scanner — vollständige Token-Erkennung
+- [x] AST-Datenstrukturen mit Visitor-Pattern
+- [x] AST-Generator-Tool (`GenerateAst`)
+- [x] AST-Pretty-Printer
+- [x] Rekursiv-Abstieg-Parser
+- [x] Ausdrücke auswerten
+- [x] Anweisungen & Zustand (`print`, `var`, Blöcke, Zuweisung)
+- [x] Kontrollfluss (`if`/`else`, `while`, `for`, `and`, `or`)
 
-**Nächste Schritte (Kapitel folgen dem Buch):**
-- Anweisungen und Zustand (Statements & State)
-- Kontrollfluss (Control Flow)
-- Funktionen
-- Klassen
+**Nächste Schritte:**
+- [ ] Funktionen
+- [ ] Klassen
 
 ## Referenzen
 
