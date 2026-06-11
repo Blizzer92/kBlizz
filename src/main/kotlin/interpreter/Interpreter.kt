@@ -2,21 +2,31 @@ package at.kblizz.interpreter
 
 import at.kblizz.ErrorReporter
 import at.kblizz.ast.Expr
+import at.kblizz.ast.Stmt
+import at.kblizz.environment.Environment
 import at.kblizz.error.RuntimeError
 import at.kblizz.token.Token
 import at.kblizz.token.TokenType
 
 
-class Interpreter : Expr.Visitor<Any?> {
+class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Void?> {
     private val errorReporter = ErrorReporter()
+    private var environment = Environment()
 
-    fun interpret(expression: Expr?) {
+    fun interpret(statements: MutableList<Stmt>) {
         try {
-            val value = evaluate(expression!!)
-            println(stringify(value))
+            for (statement in statements) {
+                execute(statement)
+            }
         } catch (error: RuntimeError) {
             errorReporter.runtimeError(error)
         }
+    }
+
+    override fun visitAssignExpr(expr: Expr.Assign): Any? {
+        val value = evaluate(expr.value)
+        environment.assign(expr.name, value)
+        return value
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): Any? {
@@ -87,6 +97,10 @@ class Interpreter : Expr.Visitor<Any?> {
         }
     }
 
+    override fun visitVariableExpr(expr: Expr.Variable): Any? {
+        return environment.get(expr.name)
+    }
+
     private fun checkNumberOperand(operator: Token?, operand: Any?) {
         if (operand is Double) return
         throw RuntimeError(operator, "Operand must be a number.")
@@ -130,5 +144,51 @@ class Interpreter : Expr.Visitor<Any?> {
 
     private fun evaluate(expr: Expr): Any? {
         return expr.accept(this)
+    }
+
+    private fun execute(stmt: Stmt) {
+        stmt.accept(this)
+    }
+
+    fun executeBlock(
+        statements: MutableList<Stmt>,
+        environment: Environment?
+    ) {
+        val previous: Environment = this.environment
+        try {
+            this.environment = environment!!
+
+            for (statement in statements) {
+                execute(statement)
+            }
+        } finally {
+            this.environment = previous
+        }
+    }
+
+    override fun visitBlockStmt(stmt: Stmt.Block): Void? {
+        executeBlock(stmt.statements, Environment(environment))
+        return null
+    }
+
+    override fun visitExpressionStmt(stmt: Stmt.Expression): Void? {
+        evaluate(stmt.expression)
+        return null
+    }
+
+    override fun visitPrintStmt(stmt: Stmt.Print): Void? {
+        val value = evaluate(stmt.expression)
+        println(stringify(value))
+        return null
+    }
+
+    override fun visitVarStmt(stmt: Stmt.Var): Void? {
+        var value: Any? = null
+        if (stmt.initializer != null) {
+            value = evaluate(stmt.initializer)
+        }
+
+        environment.define(stmt.name.lexeme, value)
+        return null
     }
 }

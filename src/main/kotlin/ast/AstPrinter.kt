@@ -1,13 +1,13 @@
 package at.kblizz.ast
 
-import at.kblizz.token.Token
-import at.kblizz.token.TokenType
-
-
 internal class AstPrinter : Expr.Visitor<String?> {
 
     fun print(expr: Expr?): String? {
         return expr?.accept<String?>(this)
+    }
+
+    override fun visitAssignExpr(expr: Expr.Assign): String {
+        return parenthesize("assign ${expr.name.lexeme}", expr.value)
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): String {
@@ -21,13 +21,17 @@ internal class AstPrinter : Expr.Visitor<String?> {
         return parenthesize("group", expr.expression)
     }
 
-    override fun visitLiteralExpr(expr: Expr.Literal): String? {
+    override fun visitLiteralExpr(expr: Expr.Literal): String {
         if (expr.value == null) return "nil"
         return expr.value.toString()
     }
 
     override fun visitUnaryExpr(expr: Expr.Unary): String {
         return parenthesize(expr.operator.lexeme, expr.right)
+    }
+
+    override fun visitVariableExpr(expr: Expr.Variable): String {
+        return expr.name.lexeme
     }
 
     private fun parenthesize(name: String?, vararg exprs: Expr): String {
